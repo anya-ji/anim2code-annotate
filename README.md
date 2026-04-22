@@ -1,6 +1,6 @@
 # anim2code-annotate
 
-Prolific annotation dashboard for pairwise video comparison of anim2code model outputs against ground truth. Participants compare two AI-generated animations on overall match, appearance, and motion.
+Prolific annotation dashboard for pairwise video comparison of anim2code model outputs against ground truth. Participants compare two generated animations on overall match, appearance, and motion.
 
 ---
 
