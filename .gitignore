@@ -2,7 +2,7 @@
 firebase_key.json
 
 # generated data
-data/
+# data/
 
 # python
 .venv/

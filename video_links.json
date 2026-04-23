@@ -15,9 +15,10 @@
         
     },
     "llama":{
+        "2fps": "llama4_scout/20260422_044813_2fps"
         
     },
     "claude":{
-        
+        "2fps": "claude_sonnet46/20260422_044812_2fps"
     }
 }

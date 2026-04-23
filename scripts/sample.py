@@ -4,7 +4,7 @@ Generate sampled trials and sync to Firestore.
 Steps:
   1. Download CSVs from HuggingFace info folder
   2. Generate all model pairs, filter to animations that exist in both
-  3. Sample 30 per pair, build 30 trials (15 + 15 re-shuffle)
+  3. Sample 30 per pair, build 20 trials (10 + 10 re-shuffle), 3 per pair per trial
   4. Sync trials to Firestore collection named by VERSION
 
 Usage:
@@ -26,12 +26,12 @@ import pandas as pd
 import requests
 from firebase_admin import credentials, firestore
 
-from config import DATA_DIR, FIREBASE_KEY, FPS, HF_BASE, MODELS, VERSION
+from config import DATA_DIR, FIREBASE_KEY, FPS, HF_BASE, HF_PREFIXES, MODELS, VERSION
 
 SEED_A = 42
 SEED_B = 99
 SAMPLES_PER_PAIR = 30
-SAMPLES_PER_PAIR_PER_TRIAL = 2  # from each pair per trial
+SAMPLES_PER_PAIR_PER_TRIAL = 3  # from each pair per trial
 
 
 def get_version_dir() -> Path:
@@ -66,8 +66,9 @@ def download_csvs(version_dir: Path) -> dict[str, Path]:
 
     downloaded = {}
     for model in MODELS:
+        hf_prefix = HF_PREFIXES.get(model, model)
         matches = [f for f in filenames if pattern.match(f)
-                   and pattern.match(f).group(1) == model
+                   and pattern.match(f).group(1) == hf_prefix
                    and pattern.match(f).group(2) == FPS]
         if not matches:
             print(f"  WARNING: no CSV found for {model} @ {FPS}, skipping")
@@ -145,7 +146,7 @@ def generate_pairs(version_dir: Path, downloaded: dict[str, Path]) -> dict[str, 
 # ── Step 3: Sample trials ────────────────────────────────────────────────────
 
 def sample_trials(pair_dfs: dict[str, pd.DataFrame]) -> list[dict]:
-    """Sample 30 per pair, build 30 trials (15 set A + 15 set B)."""
+    """Sample 30 per pair, build 20 trials (10 set A + 10 set B), 3 per pair per trial."""
     print("Step 3: Sampling trials...")
 
     # Sample 30 per pair
