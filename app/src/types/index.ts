@@ -9,19 +9,12 @@ export interface Comparison {
 }
 
 export type Choice = "left" | "right" | "same"
-export type SameDetail = "exact" | "similar"
 
 export interface Annotation {
   comparison_index: number
   match_choice: Choice
-  match_same_detail?: SameDetail
-  match_reason?: string
   appearance_choice: Choice
-  appearance_same_detail?: SameDetail
-  appearance_reason?: string
   motion_choice: Choice
-  motion_same_detail?: SameDetail
-  motion_reason?: string
   annotated_at: string
 }
 
@@ -30,8 +23,13 @@ export interface ParticipantData {
   session_id: string
   started_at: string
   completed_at: string | null
-  current_index: number
+  current_index: number // display index (0–31)
   annotations: Annotation[]
+  passed_attn_check?: boolean
+  passed_implicit_attn_check?: boolean
+  implicit_attn_round?: number
+  implicit_attn_insert_pos: number
+  implicit_attn_target_index: number
 }
 
 export interface TrialDoc {
@@ -43,7 +41,9 @@ export interface TrialDoc {
 export interface ParticipantResponse {
   trialId: string
   comparisons: Comparison[]
-  currentIndex: number
+  currentIndex: number // display index (0–31)
   annotations: Annotation[]
   completed: boolean
+  implicitAttnInsertPos: number
+  implicitAttnTargetIndex: number
 }

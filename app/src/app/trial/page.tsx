@@ -5,33 +5,75 @@ import { useRouter } from "next/navigation"
 import VideoPlayer from "@/components/VideoPlayer"
 import QuestionBlock from "@/components/QuestionBlock"
 import InstructionPanel from "@/components/InstructionPanel"
-import type { Annotation, Comparison, ParticipantResponse } from "@/types"
+import type { Annotation, Choice, Comparison, ParticipantResponse } from "@/types"
+
+const TOTAL_DISPLAY_ROUNDS = 32
+
+type ScheduleItem =
+  | { type: "real"; dataIndex: number }
+  | { type: "explicit_attn" }
+  | { type: "implicit_attn"; url: string }
+
+function buildSchedule(
+  comparisons: Comparison[],
+  implicitInsertPos: number | undefined,
+  implicitTargetIndex: number | undefined,
+): ScheduleItem[] {
+  const insertPos = (implicitInsertPos != null && implicitInsertPos >= 1 && implicitInsertPos <= 30) ? implicitInsertPos : 1
+  const targetIdx = (implicitTargetIndex != null && implicitTargetIndex < comparisons.length) ? implicitTargetIndex : 0
+
+  const real: ScheduleItem[] = comparisons.map((_, i) => ({ type: "real" as const, dataIndex: i }))
+
+  // Explicit check inserted after 15 real rounds → position 15
+  const withExplicit: ScheduleItem[] = [
+    ...real.slice(0, 15),
+    { type: "explicit_attn" as const },
+    ...real.slice(15),
+  ]
+
+  const implicit: ScheduleItem = {
+    type: "implicit_attn" as const,
+    url: comparisons[targetIdx].ground_truth_url,
+  }
+
+  return [
+    ...withExplicit.slice(0, insertPos),
+    implicit,
+    ...withExplicit.slice(insertPos),
+  ]
+}
 
 interface StoredData extends ParticipantResponse {
   pid: string
   studyId: string
   sessionId: string
+  // Persisted for explicit attention check across refreshes
+  attnPrompts?: [Choice, Choice, Choice]
+  attnCompIdx?: number
 }
 
 export default function TrialPage() {
   const router = useRouter()
   const [data, setData] = useState<StoredData | null>(null)
-  const [index, setIndex] = useState(0)
+  const [displayIndex, setDisplayIndex] = useState(0)
   const [saving, setSaving] = useState(false)
   const [countdown, setCountdown] = useState(5)
+  const [attnPrompts, setAttnPrompts] = useState<[Choice, Choice, Choice] | null>(null)
+  const [attnCompIdx, setAttnCompIdx] = useState<number | null>(null)
 
   useEffect(() => {
     const raw = sessionStorage.getItem("trialData")
     if (!raw) { router.replace("/"); return }
     const parsed: StoredData = JSON.parse(raw)
     setData(parsed)
-    setIndex(parsed.currentIndex)
+    setDisplayIndex(parsed.currentIndex)
+    if (parsed.attnPrompts) setAttnPrompts(parsed.attnPrompts)
+    if (parsed.attnCompIdx != null) setAttnCompIdx(parsed.attnCompIdx)
   }, [router])
 
-  // Reset and run countdown whenever the comparison index changes
   useEffect(() => {
     setCountdown(5)
-  }, [index])
+  }, [displayIndex])
 
   useEffect(() => {
     if (countdown <= 0) return
@@ -47,66 +89,195 @@ export default function TrialPage() {
     )
   }
 
-  const comparisons = data.comparisons
-  const total = comparisons.length
-  const comparison: Comparison = comparisons[index]
+  const schedule = buildSchedule(data.comparisons, data.implicitAttnInsertPos, data.implicitAttnTargetIndex)
+  const currentItem = schedule[displayIndex]
 
-  const handleComplete = async (result: Omit<Annotation, "comparison_index" | "annotated_at">) => {
+  const advanceTo = (nextDisplayIndex: number, base: StoredData) => {
+    if (nextDisplayIndex >= TOTAL_DISPLAY_ROUNDS) {
+      sessionStorage.removeItem("trialData")
+      router.push("/end")
+      return
+    }
+
+    let stored: StoredData = { ...base, currentIndex: nextDisplayIndex }
+
+    // If the next step is the explicit attn check, generate + persist prompts now
+    const nextItem = schedule[nextDisplayIndex]
+    if (nextItem.type === "explicit_attn" && !stored.attnPrompts) {
+      const choices: Choice[] = ["left", "right", "same"]
+      const rand = () => choices[Math.floor(Math.random() * 3)]
+      const prompts: [Choice, Choice, Choice] = [rand(), rand(), rand()]
+      const compIdx = Math.floor(Math.random() * 15) // from first 15 real rounds
+      setAttnPrompts(prompts)
+      setAttnCompIdx(compIdx)
+      stored = { ...stored, attnPrompts: prompts, attnCompIdx: compIdx }
+    }
+
+    setData(stored)
+    sessionStorage.setItem("trialData", JSON.stringify(stored))
+    setDisplayIndex(nextDisplayIndex)
+  }
+
+  const postAnnotation = (body: Record<string, unknown>) =>
+    fetch("/api/annotation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+
+  const handleRealComplete = async (result: Omit<Annotation, "comparison_index" | "annotated_at">) => {
+    const item = currentItem as { type: "real"; dataIndex: number }
     setSaving(true)
     try {
-      const resp = await fetch("/api/annotation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pid: data.pid,
-          trialId: data.trialId,
-          comparisonIndex: index,
-          annotation: result,
-          totalComparisons: total,
-        }),
+      await postAnnotation({
+        pid: data.pid,
+        trialId: data.trialId,
+        displayIndex,
+        comparisonIndex: item.dataIndex,
+        annotation: result,
       })
-      const json = await resp.json()
-      if (json.completed) {
-        sessionStorage.removeItem("trialData")
-        router.push("/end")
-      } else {
-        setIndex(json.nextIndex)
-        const updated: StoredData = { ...data, currentIndex: json.nextIndex }
-        sessionStorage.setItem("trialData", JSON.stringify(updated))
-      }
+      advanceTo(displayIndex + 1, data)
     } finally {
       setSaving(false)
     }
   }
 
-  return (
-    <div className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-3 gap-2">
-      {/* Progress */}
-      <div className="flex items-center gap-3 flex-none">
-        <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-          <div
-            className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-            style={{ width: `${(index / total) * 100}%` }}
-          />
-        </div>
-        <span className="text-xs text-gray-500 whitespace-nowrap">{index + 1} / {total}</span>
-      </div>
+  const handleExplicitAttnComplete = async (result: Omit<Annotation, "comparison_index" | "annotated_at">) => {
+    const passed =
+      result.match_choice === attnPrompts![0] &&
+      result.appearance_choice === attnPrompts![1] &&
+      result.motion_choice === attnPrompts![2]
 
-      {/* Reference video — centered, same width as one candidate */}
+    setSaving(true)
+    try {
+      await postAnnotation({
+        pid: data.pid,
+        trialId: data.trialId,
+        displayIndex,
+        isAttentionCheck: true,
+        passedAttentionCheck: passed,
+      })
+      setAttnPrompts(null)
+      setAttnCompIdx(null)
+      const { attnPrompts: _p, attnCompIdx: _c, ...rest } = data
+      advanceTo(displayIndex + 1, rest as StoredData)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleImplicitAttnComplete = async (result: Omit<Annotation, "comparison_index" | "annotated_at">) => {
+    const passed =
+      result.match_choice === "same" &&
+      result.appearance_choice === "same" &&
+      result.motion_choice === "same"
+
+    setSaving(true)
+    try {
+      await postAnnotation({
+        pid: data.pid,
+        trialId: data.trialId,
+        displayIndex,
+        isImplicitAttnCheck: true,
+        passedImplicitAttnCheck: passed,
+      })
+      advanceTo(displayIndex + 1, data)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Layouts ──────────────────────────────────────────────────────────────
+
+  const progressBar = (
+    <div className="flex items-center gap-3 flex-none">
+      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+        <div
+          className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+          style={{ width: `${(displayIndex / TOTAL_DISPLAY_ROUNDS) * 100}%` }}
+        />
+      </div>
+      <span className="text-xs text-gray-500 whitespace-nowrap">{displayIndex + 1} / {TOTAL_DISPLAY_ROUNDS}</span>
+    </div>
+  )
+
+  const videoLayout = (comparison: { ground_truth_url: string; left_url: string; right_url: string }) => (
+    <>
       <div className="flex-none flex flex-col items-center gap-1">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Reference</p>
         <div className="w-1/2">
           <VideoPlayer url={comparison.ground_truth_url} videoHeight="h-50" />
         </div>
       </div>
-
-      {/* Candidate videos — same height as reference */}
       <div className="flex-none grid grid-cols-2 gap-4">
         <VideoPlayer url={comparison.left_url} label="Left" videoHeight="h-50" />
         <VideoPlayer url={comparison.right_url} label="Right" videoHeight="h-50" />
       </div>
+    </>
+  )
 
-      {/* Questions + Instructions */}
+  // Explicit attention check
+  if (currentItem.type === "explicit_attn" && attnPrompts && attnCompIdx != null) {
+    const attnComp = data.comparisons[attnCompIdx]
+    return (
+      <div className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-3 gap-2">
+        {progressBar}
+        {videoLayout(attnComp)}
+        <div className="flex-1 min-h-0 grid grid-cols-[1fr_240px] gap-4 items-start pt-1">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 overflow-y-auto max-h-full">
+            {saving ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                Saving...
+              </div>
+            ) : (
+              <QuestionBlock key="explicit-attn" onComplete={handleExplicitAttnComplete} promptedChoices={attnPrompts} />
+            )}
+          </div>
+          <InstructionPanel />
+        </div>
+      </div>
+    )
+  }
+
+  // Implicit attention check — looks identical to a real round
+  if (currentItem.type === "implicit_attn") {
+    const url = (currentItem as { type: "implicit_attn"; url: string }).url
+    const fakeComp = { ground_truth_url: url, left_url: url, right_url: url }
+    return (
+      <div className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-3 gap-2">
+        {progressBar}
+        {videoLayout(fakeComp)}
+        <div className="flex-1 min-h-0 grid grid-cols-[1fr_240px] gap-4 items-start pt-1">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 overflow-y-auto max-h-full">
+            {saving ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                Saving...
+              </div>
+            ) : countdown > 0 ? (
+              <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <div className="w-4 h-4 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin" />
+                Questions available in {countdown}s…
+              </div>
+            ) : (
+              <QuestionBlock key={`implicit-${displayIndex}`} onComplete={handleImplicitAttnComplete} />
+            )}
+          </div>
+          <InstructionPanel />
+        </div>
+      </div>
+    )
+  }
+
+  // Regular real round
+  const item = currentItem as { type: "real"; dataIndex: number }
+  const comparison: Comparison = data.comparisons[item.dataIndex]
+
+  return (
+    <div className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-3 gap-2">
+      {progressBar}
+      {videoLayout(comparison)}
       <div className="flex-1 min-h-0 grid grid-cols-[1fr_240px] gap-4 items-start pt-1">
         <div className="bg-white rounded-xl border border-gray-200 p-3 overflow-y-auto max-h-full">
           {saving ? (
@@ -120,7 +291,7 @@ export default function TrialPage() {
               Questions available in {countdown}s…
             </div>
           ) : (
-            <QuestionBlock key={index} onComplete={handleComplete} />
+            <QuestionBlock key={displayIndex} onComplete={handleRealComplete} />
           )}
         </div>
         <InstructionPanel />

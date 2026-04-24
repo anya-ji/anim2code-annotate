@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
         currentIndex: pdata.current_index,
         annotations: pdata.annotations ?? [],
         completed: pdata.completed_at != null,
+        implicitAttnInsertPos: pdata.implicit_attn_insert_pos,
+        implicitAttnTargetIndex: pdata.implicit_attn_target_index,
       }
       return Response.json(res)
     }
@@ -40,6 +42,12 @@ export async function GET(request: NextRequest) {
   const target = sorted[0]
   if (!target) return Response.json({ error: "No trials available" }, { status: 503 })
 
+  // Generate implicit attention check params:
+  // Insert position in the 31-item (real+explicit) array: [1,30] \ {15}
+  const validPositions = Array.from({ length: 30 }, (_, i) => i + 1).filter((p) => p !== 15)
+  const implicitInsertPos = validPositions[Math.floor(Math.random() * validPositions.length)]
+  const implicitTargetIndex = Math.floor(Math.random() * target.comparisons.length)
+
   const pdata: ParticipantData = {
     study_id: studyId,
     session_id: sessionId,
@@ -47,6 +55,8 @@ export async function GET(request: NextRequest) {
     completed_at: null,
     current_index: 0,
     annotations: [],
+    implicit_attn_insert_pos: implicitInsertPos,
+    implicit_attn_target_index: implicitTargetIndex,
   }
 
   await col.doc(target.id).update({ [`participants.${pid}`]: pdata })
@@ -57,6 +67,8 @@ export async function GET(request: NextRequest) {
     currentIndex: 0,
     annotations: [],
     completed: false,
+    implicitAttnInsertPos: implicitInsertPos,
+    implicitAttnTargetIndex: implicitTargetIndex,
   }
   return Response.json(res)
 }

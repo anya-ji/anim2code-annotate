@@ -27,11 +27,11 @@ function Instructions({ onContinue }: { onContinue: () => void }) {
         </p>
         <p>For each comparison, you will answer three questions:</p>
         <ol className="list-decimal list-inside space-y-1 ml-2">
-          <li>Which generated video matches the reference better overall?</li>
+          <li>Which generated video matches the reference better overall (regardless of position)?</li>
           <li>Which is better in terms of visual <strong>appearance</strong>?</li>
-          <p className="text-sm text-blue-500">ONLY focus on <u>shape, color, and style</u>, regardless of where the animated shape is or how it moves.</p>
+          <p className="text-sm text-blue-500">ONLY focus on <u>shape, color, and style</u>, regardless of <strong>position</strong> or motion.</p>
           <li>Which is better in terms of <strong>motion</strong>?</li>
-          <p className="text-sm text-blue-500">ONLY focus on <u>movement path and speed</u>, regardless of what animated shape looks like.</p>
+          <p className="text-sm text-blue-500">ONLY focus on <u>movement path and speed</u>, regardless of <strong>position</strong> or appearance.</p>
         </ol>
         <p>
           Choose <strong>Left</strong> or <strong>Right</strong> whenever
@@ -39,7 +39,7 @@ function Instructions({ onContinue }: { onContinue: () => void }) {
           exactly the same or you cannot clearly pick a better one.
         </p>
         <p className="text-sm text-gray-500">
-          Videos play automatically on loop. There is no time limit. There will be 30 trials in total and will take roughly 10 minutes to complete.
+          Videos play automatically on loop. There is no time limit. There will be 32 rounds in total and will take roughly 10 minutes to complete.
           By the end of the study, you will click a button to submit your annotations to Prolific. You will receive a payment of $2.00 USD upon approval.
         </p>
       </div>
