@@ -22,11 +22,13 @@ const CHOICE_LABEL: Record<Choice, string> = {
 
 function ChoiceRow({
   question,
+  hint,
   value,
   onChange,
   prompt,
 }: {
   question: string
+  hint?: string
   value: QuestionState
   onChange: (v: QuestionState) => void
   prompt?: Choice
@@ -38,6 +40,7 @@ function ChoiceRow({
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium text-gray-800">{question}</p>
+      {hint && <p className="text-xs text-blue-600 italic">{hint}</p>}
       {prompt && (
         <p className="text-sm font-semibold text-red-600">
           Please choose {CHOICE_LABEL[prompt]} for this question!
@@ -121,7 +124,7 @@ export default function QuestionBlock({ onComplete, promptedChoices }: QuestionB
       )}
 
       <ChoiceRow
-        question="Which of the two videos matches the top video better (regardless of position)?"
+        question="Which of the two videos matches the reference better overall (regardless of position)?"
         value={q1}
         onChange={handleQ1Change}
         prompt={promptedChoices?.[0]}
@@ -131,12 +134,14 @@ export default function QuestionBlock({ onComplete, promptedChoices }: QuestionB
         <>
           <ChoiceRow
             question="Appearance-wise, which is closer to the reference?"
+            hint="ONLY focus on shape, color, and style — NOT motion or position."
             value={q2}
             onChange={setQ2}
             prompt={promptedChoices?.[1]}
           />
           <ChoiceRow
             question="Motion-wise, which is closer to the reference?"
+            hint="ONLY focus on movement path and speed — NOT appearance or position."
             value={q3}
             onChange={setQ3}
             prompt={promptedChoices?.[2]}
