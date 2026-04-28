@@ -136,8 +136,8 @@ function Page1({ onNext, skipTimer }: { onNext: () => void; skipTimer?: boolean 
         </p>
         <p>
           There will be 32 rounds in total. Videos will play on loop. There is no time limit for each round.
-          This study should take around 10 minutes to complete.
-          You will be paid $2.00 USD upon approval.
+          This study should take around <strong>15 minutes</strong> to complete.
+          You will be paid <strong>$4.50 USD</strong> upon approval.
           Submissions that fail attention checks or show clear patterns of random or uniform responses may be rejected.
         </p>
         <p>We will start with an example round to help you understand the task. Please click &quot;Next&quot; to continue.</p>
@@ -196,8 +196,9 @@ function Page3({ onContinue, onBack }: { onContinue: () => void; onBack: () => v
       <ul className="list-disc list-inside space-y-2 text-gray-700 text-sm leading-relaxed">
         <li><strong>Ignore the absolute position</strong> of the animated shape.</li>
         <li>Choose <strong>Left</strong> or <strong>Right</strong> whenever possible.</li>
-        <li>Select <strong>Equal</strong> only when truly identical or undecidable.</li>
-        <li>Some animations may be small. Click <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-black/40 text-white"><ExpandIcon /></span> on any video to enlarge it and see the details.</li>
+        <li>Select <strong>Equal</strong> only when truly identical or undecidable ("equally good/bad").</li>
+        <li>Some animations may be small! Click <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-black/40 text-white"><ExpandIcon /></span> on any video to <strong>enlarge</strong> it and see the details.</li>
+        <li>Please finish the study <strong>in one sitting</strong>.</li>
       </ul>
       <p>Click "Start study" to begin.</p>
       <button
@@ -225,8 +226,8 @@ export default function HomeClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pid = searchParams.get("PROLIFIC_PID")
-  const studyId = searchParams.get("STUDY_ID") ?? ""
-  const sessionId = searchParams.get("SESSION_ID") ?? ""
+  const studyId = searchParams.get("STUDY_ID")
+  const sessionId = searchParams.get("SESSION_ID")
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -234,12 +235,13 @@ export default function HomeClient() {
   const [trialData, setTrialData] = useState<ParticipantResponse | null>(null)
 
   useEffect(() => {
-    if (!pid) {
-      setError("Missing participant ID. Please access this page via the Prolific link.")
+    const isTest = pid?.toLowerCase().includes("test") ?? false
+    if (!pid || (!isTest && (!studyId || !sessionId))) {
+      setError("Invalid link.")
       setLoading(false)
       return
     }
-    const params = new URLSearchParams({ pid, study_id: studyId, session_id: sessionId })
+    const params = new URLSearchParams({ pid, study_id: studyId ?? "", session_id: sessionId ?? "" })
     fetch(`/api/participant?${params}`)
       .then((r) => r.json())
       .then((data: ParticipantResponse) => {
@@ -264,7 +266,7 @@ export default function HomeClient() {
 
   const handleContinue = () => {
     if (!trialData) return
-    sessionStorage.setItem("trialData", JSON.stringify({ ...trialData, pid, studyId, sessionId }))
+    sessionStorage.setItem("trialData", JSON.stringify({ ...trialData, pid, studyId: studyId ?? "", sessionId: sessionId ?? "" }))
     router.push("/trial")
   }
 

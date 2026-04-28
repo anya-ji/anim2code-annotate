@@ -9,4 +9,5 @@ dependencies = [
     "pandas>=2.2",
     "requests>=2.32",
     "huggingface-hub>=0.24",
+    "matplotlib>=3.10.9",
 ]

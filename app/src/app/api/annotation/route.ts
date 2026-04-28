@@ -1,8 +1,23 @@
 import { NextRequest } from "next/server"
-import { FieldValue } from "firebase-admin/firestore"
+import { FieldValue, Firestore } from "firebase-admin/firestore"
 import { getDb } from "@/lib/firebase-admin"
 import { config } from "@/config"
 import type { Annotation } from "@/types"
+
+async function logCompletion(db: Firestore, trialId: string, pid: string) {
+  const trialSnap = await db.collection(config.version).doc(trialId).get()
+  const pdata = trialSnap.data()?.participants?.[pid] ?? {}
+  await db.collection("completions").doc(config.version).set(
+    {
+      [trialId]: FieldValue.arrayUnion({
+        pid,
+        passed_attn_check: pdata.passed_attn_check ?? null,
+        passed_implicit_attn_check: pdata.passed_implicit_attn_check ?? null,
+      }),
+    },
+    { merge: true }
+  )
+}
 
 const TOTAL_DISPLAY_ROUNDS = 32
 
@@ -52,6 +67,7 @@ export async function POST(request: NextRequest) {
     }
     if (completed) update[`participants.${pid}.completed_at`] = new Date().toISOString()
     await doc.update(update)
+    if (completed) await logCompletion(db, trialId, pid)
     return Response.json({ ok: true, completed })
   }
 
@@ -63,6 +79,7 @@ export async function POST(request: NextRequest) {
     }
     if (completed) update[`participants.${pid}.completed_at`] = new Date().toISOString()
     await doc.update(update)
+    if (completed) await logCompletion(db, trialId, pid)
     return Response.json({ ok: true, completed })
   }
 
@@ -84,5 +101,6 @@ export async function POST(request: NextRequest) {
   if (completed) update[`participants.${pid}.completed_at`] = new Date().toISOString()
 
   await doc.update(update)
+  if (completed) await logCompletion(db, trialId, pid)
   return Response.json({ ok: true, completed })
 }

@@ -1,24 +1,27 @@
 {
     "gemini": {
-        "24fps": "gemini/20260407_002942_24fps_0406",
-        "2fps": "gemini/20260421_081639_2fps"
+        "2fps": "gemini/20260421_081639_2fps",
+        "info": "info/gemini_20260421_081639_2fps_info.csv"
+        
 
     },
     "qwen3vl":{
-        "24fps": "qwen3vl/20260407_064920_24fps_0406",
-        "2fps": "qwen3vl/20260421_071524_2fps"
+        "2fps": "qwen3vl/20260421_071524_2fps",
+        "info": "info/qwen3vl_20260421_071524_2fps_info.csv"
 
     },
     "gpt":{
         "2fps": "gpt/20260422_003253_2fps",
-        "8fps": "gpt/20260422_003254_8fps"
+        "info": "info/gpt_20260422_003253_2fps_info.csv"
         
     },
     "llama":{
-        "2fps": "llama4_scout/20260422_044813_2fps"
+        "2fps": "llama4_scout/20260422_044813_2fps",
+        "info": "info/llama4_scout_20260422_044813_2fps_info.csv"
         
     },
     "claude":{
-        "2fps": "claude_sonnet46/20260422_044812_2fps"
+        "2fps": "claude_sonnet46/20260422_044812_2fps",
+        "info":"info/claude_sonnet46_20260422_044812_2fps_info.csv"
     }
 }

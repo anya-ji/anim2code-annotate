@@ -1,0 +1,12 @@
+{
+  "gemini_qwen3vl": 179,
+  "gemini_gpt": 210,
+  "gemini_llama": 205,
+  "gemini_claude": 210,
+  "qwen3vl_gpt": 183,
+  "qwen3vl_llama": 178,
+  "qwen3vl_claude": 182,
+  "gpt_llama": 209,
+  "gpt_claude": 213,
+  "llama_claude": 208
+}

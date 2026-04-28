@@ -13,10 +13,11 @@ export async function GET(request: NextRequest) {
 
   const db = getDb()
   const col = db.collection(config.version)
+
+  // Check for existing assignment outside the transaction — assignments are immutable once made
   const snapshot = await col.get()
   const trials = snapshot.docs.map((d) => d.data() as TrialDoc)
 
-  // Find existing assignment
   for (const trial of trials) {
     const pdata = trial.participants?.[pid]
     if (pdata) {
@@ -33,34 +34,43 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Assign to trial with fewest participants
-  const sorted = [...trials].sort(
-    (a, b) =>
-      Object.keys(a.participants ?? {}).length -
-      Object.keys(b.participants ?? {}).length
-  )
-  const target = sorted[0]
-  if (!target) return Response.json({ error: "No trials available" }, { status: 503 })
+  // Atomically assign to the trial with fewest participants so concurrent
+  // requests don't all land on the same trial
+  const result = await db.runTransaction(async (tx) => {
+    const txSnapshot = await tx.get(col)
+    const txTrials = txSnapshot.docs.map((d) => d.data() as TrialDoc)
 
-  // Generate implicit attention check params:
-  // Insert position in the 31-item (real+explicit) array: [1,30] \ {15}
-  const validPositions = Array.from({ length: 30 }, (_, i) => i + 1).filter((p) => p !== 15)
-  const implicitInsertPos = validPositions[Math.floor(Math.random() * validPositions.length)]
-  const implicitTargetIndex = Math.floor(Math.random() * target.comparisons.length)
+    const sorted = [...txTrials].sort(
+      (a, b) =>
+        Object.keys(a.participants ?? {}).length -
+        Object.keys(b.participants ?? {}).length
+    )
+    const target = sorted[0]
+    if (!target) return null
 
-  const pdata: ParticipantData = {
-    study_id: studyId,
-    session_id: sessionId,
-    started_at: new Date().toISOString(),
-    completed_at: null,
-    current_index: 0,
-    annotations: [],
-    implicit_attn_insert_pos: implicitInsertPos,
-    implicit_attn_target_index: implicitTargetIndex,
-  }
+    const validPositions = Array.from({ length: 30 }, (_, i) => i + 1).filter((p) => p !== 15)
+    const implicitInsertPos = validPositions[Math.floor(Math.random() * validPositions.length)]
+    const implicitTargetIndex = Math.floor(Math.random() * target.comparisons.length)
 
-  await col.doc(target.id).update({ [`participants.${pid}`]: pdata })
+    const pdata: ParticipantData = {
+      study_id: studyId,
+      session_id: sessionId,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      current_index: 0,
+      annotations: [],
+      implicit_attn_insert_pos: implicitInsertPos,
+      implicit_attn_target_index: implicitTargetIndex,
+    }
 
+    tx.update(col.doc(target.id), { [`participants.${pid}`]: pdata })
+
+    return { target, implicitInsertPos, implicitTargetIndex }
+  })
+
+  if (!result) return Response.json({ error: "No trials available" }, { status: 503 })
+
+  const { target, implicitInsertPos, implicitTargetIndex } = result
   const res: ParticipantResponse = {
     trialId: target.id,
     comparisons: target.comparisons,
