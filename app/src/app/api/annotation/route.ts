@@ -70,6 +70,15 @@ export async function POST(request: NextRequest) {
       [`participants.${pid}.last_updated_at`]: now,
     }
     if (completed) update[`participants.${pid}.completed_at`] = now
+    if (!body.passedAttentionCheck) {
+      update[`participants.${pid}.rejected`] = true
+    } else {
+      const snap = await doc.get()
+      const pdata = snap.data()?.participants?.[pid] ?? {}
+      if (pdata.passed_implicit_attn_check === false) {
+        update[`participants.${pid}.flagged`] = true
+      }
+    }
     await doc.update(update)
     if (completed) await logCompletion(db, trialId, pid)
     return Response.json({ ok: true, completed })
@@ -84,6 +93,13 @@ export async function POST(request: NextRequest) {
       [`participants.${pid}.last_updated_at`]: now,
     }
     if (completed) update[`participants.${pid}.completed_at`] = now
+    if (!body.passedImplicitAttnCheck) {
+      const snap = await doc.get()
+      const pdata = snap.data()?.participants?.[pid] ?? {}
+      if (pdata.passed_attn_check === true) {
+        update[`participants.${pid}.flagged`] = true
+      }
+    }
     await doc.update(update)
     if (completed) await logCompletion(db, trialId, pid)
     return Response.json({ ok: true, completed })

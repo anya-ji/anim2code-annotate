@@ -39,6 +39,8 @@ export interface ParticipantData {
   implicit_attn_insert_pos: number
   last_updated_at?: string
   expired?: boolean
+  flagged?: boolean
+  rejected?: boolean
 }
 
 export interface TrialDoc {

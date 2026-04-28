@@ -73,6 +73,14 @@ This runs four steps:
 uv run scripts/stats.py
 ```
 
+### Print trial load (assignment criteria)
+
+```bash
+uv run scripts/trial_load.py
+```
+
+Shows active-participant counts per trial using the same logic as the app's trial assignment: active = completed or last seen within 30 min; expired, flagged, rejected, and old stale records are excluded. Also shows per-trial valid/excluded/stale breakdown.
+
 ### Export annotations to CSV
 
 ```bash
@@ -118,7 +126,20 @@ Inserted at a fixed position after the 15th real round (display index 15 in the 
 Inserted at a random position in [1, 30] \ {15} (avoiding the explicit check slot). All three videos (reference, left, right) are the same fixed clip (`codepen-zaXqRn-nwpKrg-2.mp4`). The correct answer for all three questions is "Equal". Tests whether participants pay attention to the videos at all.
 
 ### Trial Assignment
-New participants are assigned to the trial with the fewest *active* participants. A participant slot is considered active if they completed the study, or have interacted within the last 30 minutes. Slots are excluded from the count if the participant is marked `expired` (set manually via `expire_participants.py`) or has no `last_updated_at` and no `completed_at` (old incomplete records).
+New participants are assigned atomically (inside a Firestore transaction) to the trial with the fewest *active* participants, subject to a quota cap.
+
+**Quota cap** — trials that already have ≥ 3 *valid* annotations (completed + passed both attention checks) are excluded from assignment entirely. The threshold is `validAnnotationQuota` in `app/src/config.ts`.
+
+**Active count** — among the remaining eligible trials, each slot is counted as active if:
+- the participant is not `expired`, `flagged`, or `rejected`, AND
+- they either completed the study, or have `last_updated_at` within the last 30 minutes.
+
+Slots with no `last_updated_at` and no `completed_at` (stale old records) do not count as active.
+
+**Participant statuses** (set automatically by the annotation route, or retroactively by `manage_participants.py`):
+- `expired` — did not complete and was inactive for >30 min
+- `flagged` — completed, passed explicit check, failed implicit check
+- `rejected` — completed, failed explicit check (or both)
 
 ### Completion Links
 - Both attention checks passed → approval link (`config.prolificLink`)

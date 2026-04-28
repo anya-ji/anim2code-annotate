@@ -6,10 +6,18 @@ import type { ParticipantData, ParticipantResponse, TrialDoc } from "@/types"
 const STALE_MS = 30 * 60 * 1000 // 30 minutes
 
 function isActiveParticipant(p: ParticipantData): boolean {
-  if (p.expired) return false
+  if (p.expired === true || p.flagged === true || p.rejected === true) return false
   if (p.completed_at != null) return true
   if (!p.last_updated_at) return false // old record with no timestamp, not finished → stale
   return Date.now() - new Date(p.last_updated_at).getTime() < STALE_MS
+}
+
+function isValidAnnotation(p: ParticipantData): boolean {
+  return p.completed_at != null && p.passed_attn_check === true && p.passed_implicit_attn_check === true
+}
+
+function isTrialFull(participants: Record<string, ParticipantData>): boolean {
+  return Object.values(participants).filter(isValidAnnotation).length >= config.validAnnotationQuota
 }
 
 export async function GET(request: NextRequest) {
@@ -48,7 +56,8 @@ export async function GET(request: NextRequest) {
     const txSnapshot = await tx.get(col)
     const txTrials = txSnapshot.docs.map((d) => d.data() as TrialDoc)
 
-    const sorted = [...txTrials].sort(
+    const eligible = txTrials.filter((t) => !isTrialFull(t.participants ?? {}))
+    const sorted = [...eligible].sort(
       (a, b) =>
         Object.values(a.participants ?? {}).filter(isActiveParticipant).length -
         Object.values(b.participants ?? {}).filter(isActiveParticipant).length
