@@ -1,13 +1,27 @@
-"use client"
-
-import { useSearchParams } from "next/navigation"
+import { getDb } from "@/lib/firebase-admin"
 import { config } from "@/config"
 
-export default function EndPage() {
-  const searchParams = useSearchParams()
-  const passedAttn = searchParams.get("passed_attn") === "true"
-  const passedImplicit = searchParams.get("passed_implicit") === "true"
-  const link = passedAttn && passedImplicit ? config.prolificLink : config.prolificFailedLink
+export default async function EndPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pid?: string; trialId?: string }>
+}) {
+  const { pid, trialId } = await searchParams
+
+  let link: string = config.prolificFailedLink
+
+  if (pid && trialId) {
+    try {
+      const db = getDb()
+      const doc = await db.collection(config.version).doc(trialId).get()
+      const pdata = doc.data()?.participants?.[pid]
+      if (pdata?.passed_attn_check === true && pdata?.passed_implicit_attn_check === true) {
+        link = config.prolificLink
+      }
+    } catch {
+      // default to failed link on error
+    }
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen">

@@ -16,8 +16,6 @@ interface StoredData extends ParticipantResponse {
   // Persisted for explicit attention check across refreshes
   attnPrompts?: [Choice, Choice, Choice]
   attnCompIdx?: number
-  passedAttnCheck?: boolean
-  passedImplicitAttnCheck?: boolean
 }
 
 export default function TrialPage() {
@@ -63,10 +61,7 @@ export default function TrialPage() {
   const advanceTo = (nextDisplayIndex: number, base: StoredData) => {
     if (nextDisplayIndex >= TOTAL_DISPLAY_ROUNDS) {
       sessionStorage.removeItem("trialData")
-      const params = new URLSearchParams({
-        passed_attn: String(base.passedAttnCheck ?? false),
-        passed_implicit: String(base.passedImplicitAttnCheck ?? false),
-      })
+      const params = new URLSearchParams({ pid: base.pid, trialId: base.trialId })
       router.push(`/end?${params}`)
       return
     }

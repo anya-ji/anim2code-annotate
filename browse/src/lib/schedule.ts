@@ -7,7 +7,7 @@ export type ScheduleItem =
 
 export const TOTAL_DISPLAY_ROUNDS = 32
 export const ATTN_GROUND_TRUTH_URL =
-  "https://huggingface.co/datasets/anim2code/baselines/resolve/main/ground_truth/codepen-AvEZRv-mdzXpap.mp4"
+  "https://huggingface.co/datasets/anim2code/baselines/resolve/main/ground_truth/codepen-zaXqRn-nwpKrg-2.mp4"
 
 export function buildSchedule(
   comparisons: Comparison[],

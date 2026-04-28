@@ -199,7 +199,7 @@ function Page3({ onContinue, onBack }: { onContinue: () => void; onBack: () => v
         <li>Choose <strong>Left</strong> or <strong>Right</strong> whenever possible.</li>
         <li>Select <strong>Equal</strong> only when truly identical or undecidable ("equally good/bad").</li>
         <li>Some animations may be small! Click <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-black/40 text-white"><ExpandIcon /></span> on any video to <strong>enlarge</strong> it and see the details.</li>
-        <li>Please finish the study <strong>in one sitting</strong>.</li>
+        <li>Please finish the study <strong>in one sitting</strong>. Pay attention to the prompts. </li>
       </ul>
       <p>Click "Start study" to begin.</p>
       <button
@@ -247,7 +247,7 @@ export default function HomeClient() {
       .then((r) => r.json())
       .then((data: ParticipantResponse) => {
         if (data.completed) {
-          router.replace("/end")
+          router.replace(`/end?pid=${encodeURIComponent(pid!)}&trialId=${encodeURIComponent(data.trialId)}`)
           return
         }
         if (data.currentIndex > 0) {
