@@ -25,6 +25,8 @@ type TrialSummary = {
   participantCount: number
   completedCount: number
   validCount: number
+  flaggedCount: number
+  rejectedCount: number
   explicitPass: number
   explicitFail: number
   implicitPass: number
@@ -83,13 +85,15 @@ export default async function BrowsePage() {
 
   for (const trial of trials) {
     const pids = Object.keys(trial.participants ?? {})
-    let completedCount = 0, validCount = 0, explicitPass = 0, explicitFail = 0, implicitPass = 0, implicitFail = 0
+    let completedCount = 0, validCount = 0, flaggedCount = 0, rejectedCount = 0, explicitPass = 0, explicitFail = 0, implicitPass = 0, implicitFail = 0
 
     for (const pid of pids) {
       const p: ParticipantData = trial.participants[pid]
       const completed = p.completed_at != null
       if (completed) completedCount++
       if (completed && p.passed_attn_check === true && p.passed_implicit_attn_check === true) validCount++
+      if (completed && p.passed_attn_check === true && p.passed_implicit_attn_check === false) flaggedCount++
+      if (completed && p.passed_attn_check === false) rejectedCount++
       if (p.passed_attn_check === true) explicitPass++
       else if (p.passed_attn_check === false) explicitFail++
       if (p.passed_implicit_attn_check === true) implicitPass++
@@ -105,7 +109,7 @@ export default async function BrowsePage() {
         completedAt: p.completed_at,
       })
     }
-    trialSummaries.push({ trialId: trial.id, participantCount: pids.length, completedCount, validCount, explicitPass, explicitFail, implicitPass, implicitFail })
+    trialSummaries.push({ trialId: trial.id, participantCount: pids.length, completedCount, validCount, flaggedCount, rejectedCount, explicitPass, explicitFail, implicitPass, implicitFail })
   }
 
   const statusOrder: Record<ParticipantStatus, number> = { completed: 0, "in-progress": 1, expired: 2, stale: 3 }
@@ -160,9 +164,32 @@ export default async function BrowsePage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {["Trial ID", "Participants", "Completed", "Valid", "Explicit Pass", "Explicit Fail", "Implicit Pass", "Implicit Fail"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Trial ID</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Participants</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Completed</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Valid</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <span className="flex items-center gap-1">
+                    Flagged
+                    <span className="relative group cursor-help text-gray-400 normal-case font-normal">
+                      ⓘ
+                      <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 hidden group-hover:block w-max max-w-52 rounded bg-gray-800 px-2 py-1 text-[11px] font-normal text-white shadow-md z-10">
+                        Completed · passed explicit · failed implicit
+                      </span>
+                    </span>
+                  </span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <span className="flex items-center gap-1">
+                    Rejected
+                    <span className="relative group cursor-help text-gray-400 normal-case font-normal">
+                      ⓘ
+                      <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 hidden group-hover:block w-max max-w-52 rounded bg-gray-800 px-2 py-1 text-[11px] font-normal text-white shadow-md z-10">
+                        Completed · failed explicit (or both)
+                      </span>
+                    </span>
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -172,10 +199,8 @@ export default async function BrowsePage() {
                   <td className="px-4 py-3 text-gray-700">{t.participantCount}</td>
                   <td className="px-4 py-3 text-gray-700">{t.completedCount}</td>
                   <td className="px-4 py-3 font-semibold text-blue-700">{t.validCount}</td>
-                  <td className="px-4 py-3 text-green-700">{t.explicitPass}</td>
-                  <td className="px-4 py-3 text-red-600">{t.explicitFail}</td>
-                  <td className="px-4 py-3 text-green-700">{t.implicitPass}</td>
-                  <td className="px-4 py-3 text-red-600">{t.implicitFail}</td>
+                  <td className="px-4 py-3 text-amber-600">{t.flaggedCount}</td>
+                  <td className="px-4 py-3 text-red-600">{t.rejectedCount}</td>
                 </tr>
               ))}
             </tbody>
@@ -185,10 +210,8 @@ export default async function BrowsePage() {
                 <td className="px-4 py-3 font-semibold text-gray-700">{trialSummaries.reduce((s, t) => s + t.participantCount, 0)}</td>
                 <td className="px-4 py-3 font-semibold text-gray-700">{trialSummaries.reduce((s, t) => s + t.completedCount, 0)}</td>
                 <td className="px-4 py-3 font-semibold text-blue-700">{trialSummaries.reduce((s, t) => s + t.validCount, 0)}</td>
-                <td className="px-4 py-3 font-semibold text-green-700">{trialSummaries.reduce((s, t) => s + t.explicitPass, 0)}</td>
-                <td className="px-4 py-3 font-semibold text-red-600">{trialSummaries.reduce((s, t) => s + t.explicitFail, 0)}</td>
-                <td className="px-4 py-3 font-semibold text-green-700">{trialSummaries.reduce((s, t) => s + t.implicitPass, 0)}</td>
-                <td className="px-4 py-3 font-semibold text-red-600">{trialSummaries.reduce((s, t) => s + t.implicitFail, 0)}</td>
+                <td className="px-4 py-3 font-semibold text-amber-600">{trialSummaries.reduce((s, t) => s + t.flaggedCount, 0)}</td>
+                <td className="px-4 py-3 font-semibold text-red-600">{trialSummaries.reduce((s, t) => s + t.rejectedCount, 0)}</td>
               </tr>
             </tfoot>
           </table>
