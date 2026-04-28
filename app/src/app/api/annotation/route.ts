@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { FieldValue, Firestore } from "firebase-admin/firestore"
 import { getDb } from "@/lib/firebase-admin"
 import { config } from "@/config"
+import { TOTAL_DISPLAY_ROUNDS } from "@/lib/schedule"
 import type { Annotation, AttnChoices } from "@/types"
 
 async function logCompletion(db: Firestore, trialId: string, pid: string) {
@@ -18,8 +19,6 @@ async function logCompletion(db: Firestore, trialId: string, pid: string) {
     { merge: true }
   )
 }
-
-const TOTAL_DISPLAY_ROUNDS = 32
 
 interface RegularBody {
   pid: string

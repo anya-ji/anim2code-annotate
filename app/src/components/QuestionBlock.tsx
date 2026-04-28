@@ -12,6 +12,7 @@ const emptyQ = (): QuestionState => ({ choice: null })
 interface QuestionBlockProps {
   onComplete: (result: Omit<Annotation, "comparison_index" | "annotated_at">) => void
   promptedChoices?: [Choice, Choice, Choice]
+  suppressEqualDialog?: boolean
 }
 
 const CHOICE_LABEL: Record<Choice, string> = {
@@ -86,7 +87,7 @@ function AllEqualDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCanc
   )
 }
 
-export default function QuestionBlock({ onComplete, promptedChoices }: QuestionBlockProps) {
+export default function QuestionBlock({ onComplete, promptedChoices, suppressEqualDialog }: QuestionBlockProps) {
   const [q1, setQ1] = useState<QuestionState>(emptyQ())
   const [q2, setQ2] = useState<QuestionState>(emptyQ())
   const [q3, setQ3] = useState<QuestionState>(emptyQ())
@@ -110,7 +111,7 @@ export default function QuestionBlock({ onComplete, promptedChoices }: QuestionB
   }
 
   const handleNext = () => {
-    if (allEqual && !promptedChoices) {
+    if (allEqual && !promptedChoices && !suppressEqualDialog) {
       setShowDialog(true)
     } else {
       submit()

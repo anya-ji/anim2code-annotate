@@ -7,7 +7,6 @@ import QuestionBlock from "@/components/QuestionBlock"
 import InstructionPanel from "@/components/InstructionPanel"
 import type { Annotation, Choice, Comparison, ParticipantResponse } from "@/types"
 import { buildSchedule, TOTAL_DISPLAY_ROUNDS, ATTN_GROUND_TRUTH_URL } from "@/lib/schedule"
-import type { ScheduleItem } from "@/lib/schedule"
 
 interface StoredData extends ParticipantResponse {
   pid: string
@@ -128,7 +127,7 @@ export default function TrialPage() {
       setAttnPrompts(null)
       setAttnCompIdx(null)
       const { attnPrompts: _p, attnCompIdx: _c, ...rest } = data
-      advanceTo(displayIndex + 1, { ...rest, passedAttnCheck: passed } as StoredData)
+      advanceTo(displayIndex + 1, rest as StoredData)
     } finally {
       setSaving(false)
     }
@@ -150,7 +149,7 @@ export default function TrialPage() {
         passedImplicitAttnCheck: passed,
         annotation: result,
       })
-      advanceTo(displayIndex + 1, { ...data, passedImplicitAttnCheck: passed })
+      advanceTo(displayIndex + 1, data)
     } finally {
       setSaving(false)
     }
@@ -229,7 +228,7 @@ export default function TrialPage() {
                 Questions available in {countdown}s…
               </div>
             ) : (
-              <QuestionBlock key={`implicit-${displayIndex}`} onComplete={handleImplicitAttnComplete} />
+              <QuestionBlock key={`implicit-${displayIndex}`} onComplete={handleImplicitAttnComplete} suppressEqualDialog />
             )}
           </div>
           <InstructionPanel />
