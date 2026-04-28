@@ -5,6 +5,7 @@ import { participantStatus } from "@/lib/status"
 import type { ParticipantStatus } from "@/lib/status"
 import type { TrialDoc, ParticipantData } from "@/types"
 import { TOTAL_DISPLAY_ROUNDS } from "@/lib/schedule"
+import RefreshButton from "@/components/RefreshButton"
 
 type ParticipantRow = {
   pid: string
@@ -38,7 +39,7 @@ function StatCard({ label, value, sub }: { label: string; value: number; sub?: s
   )
 }
 
-function StatusBadge({ status }: { status: ParticipantStatus }) {
+function StatusBadge({ status, progress }: { status: ParticipantStatus; progress?: { current: number; total: number } }) {
   const styles: Record<ParticipantStatus, string> = {
     completed: "text-green-700 bg-green-100",
     "in-progress": "text-yellow-700 bg-yellow-100",
@@ -51,7 +52,12 @@ function StatusBadge({ status }: { status: ParticipantStatus }) {
     expired: "Expired",
     stale: "Stale",
   }
-  return <span className={`text-xs font-medium px-2 py-0.5 rounded ${styles[status]}`}>{labels[status]}</span>
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap ${styles[status]}`}>
+      {labels[status]}
+      {progress && <span className="tabular-nums opacity-75">{progress.current}/{progress.total}</span>}
+    </span>
+  )
 }
 
 function AttnBadge({ value }: { value: boolean | null | undefined }) {
@@ -117,9 +123,12 @@ export default async function BrowsePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
-      <h1 className="text-2xl font-semibold text-gray-900">
-        Participant Browser <span className="text-gray-400 font-normal text-lg">— {config.version}</span>
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-gray-900">
+          Participant Browser <span className="text-gray-400 font-normal text-lg">— {config.version}</span>
+        </h1>
+        <RefreshButton />
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Aggregate Stats</h2>
@@ -203,12 +212,10 @@ export default async function BrowsePage() {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{row.trialId}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={row.status} />
-                      {row.status === "in-progress" && (
-                        <span className="text-xs text-gray-400">{row.currentIndex} / {TOTAL_DISPLAY_ROUNDS}</span>
-                      )}
-                    </div>
+                    <StatusBadge
+                      status={row.status}
+                      progress={row.status === "in-progress" ? { current: row.currentIndex, total: TOTAL_DISPLAY_ROUNDS } : undefined}
+                    />
                   </td>
                   <td className="px-4 py-3"><AttnBadge value={row.explicitAttn} /></td>
                   <td className="px-4 py-3"><AttnBadge value={row.implicitAttn} /></td>
