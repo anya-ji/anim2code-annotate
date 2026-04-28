@@ -31,6 +31,17 @@ Reads `data/v3/trials.json` and `data/v3/pairs/`. Outputs three plots to `data/v
 - `coverage_histogram.png` — per-video coverage count
 - `coverage_heatmap.png` — videos × pairs binary heatmap
 
+## `expire_participants.py` — mark incomplete participants as expired
+
+Run manually after a batch finishes to free up trial slots.
+
+```bash
+uv run scripts/expire_participants.py --dry-run  # preview changes
+uv run scripts/expire_participants.py            # apply
+```
+
+Only participants without `completed_at` are affected. Expired participants are excluded from trial slot counting when new participants are assigned.
+
 ## `export.py` — export annotations from Firestore to CSV
 
 ```bash

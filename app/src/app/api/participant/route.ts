@@ -3,6 +3,15 @@ import { getDb } from "@/lib/firebase-admin"
 import { config } from "@/config"
 import type { ParticipantData, ParticipantResponse, TrialDoc } from "@/types"
 
+const STALE_MS = 30 * 60 * 1000 // 30 minutes
+
+function isActiveParticipant(p: ParticipantData): boolean {
+  if (p.expired) return false
+  if (p.completed_at != null) return true
+  if (!p.last_updated_at) return false // old record with no timestamp, not finished → stale
+  return Date.now() - new Date(p.last_updated_at).getTime() < STALE_MS
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
   const pid = searchParams.get("pid")
@@ -28,7 +37,6 @@ export async function GET(request: NextRequest) {
         annotations: pdata.annotations ?? [],
         completed: pdata.completed_at != null,
         implicitAttnInsertPos: pdata.implicit_attn_insert_pos,
-        implicitAttnTargetIndex: pdata.implicit_attn_target_index,
       }
       return Response.json(res)
     }
@@ -42,15 +50,14 @@ export async function GET(request: NextRequest) {
 
     const sorted = [...txTrials].sort(
       (a, b) =>
-        Object.keys(a.participants ?? {}).length -
-        Object.keys(b.participants ?? {}).length
+        Object.values(a.participants ?? {}).filter(isActiveParticipant).length -
+        Object.values(b.participants ?? {}).filter(isActiveParticipant).length
     )
     const target = sorted[0]
     if (!target) return null
 
     const validPositions = Array.from({ length: 30 }, (_, i) => i + 1).filter((p) => p !== 15)
     const implicitInsertPos = validPositions[Math.floor(Math.random() * validPositions.length)]
-    const implicitTargetIndex = Math.floor(Math.random() * target.comparisons.length)
 
     const pdata: ParticipantData = {
       study_id: studyId,
@@ -60,17 +67,16 @@ export async function GET(request: NextRequest) {
       current_index: 0,
       annotations: [],
       implicit_attn_insert_pos: implicitInsertPos,
-      implicit_attn_target_index: implicitTargetIndex,
     }
 
     tx.update(col.doc(target.id), { [`participants.${pid}`]: pdata })
 
-    return { target, implicitInsertPos, implicitTargetIndex }
+    return { target, implicitInsertPos }
   })
 
   if (!result) return Response.json({ error: "No trials available" }, { status: 503 })
 
-  const { target, implicitInsertPos, implicitTargetIndex } = result
+  const { target, implicitInsertPos } = result
   const res: ParticipantResponse = {
     trialId: target.id,
     comparisons: target.comparisons,
@@ -78,7 +84,6 @@ export async function GET(request: NextRequest) {
     annotations: [],
     completed: false,
     implicitAttnInsertPos: implicitInsertPos,
-    implicitAttnTargetIndex: implicitTargetIndex,
   }
   return Response.json(res)
 }

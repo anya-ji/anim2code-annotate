@@ -29,7 +29,7 @@ export interface ParticipantData {
   session_id: string
   started_at: string
   completed_at: string | null
-  current_index: number // display index (0–31)
+  current_index: number
   annotations: Annotation[]
   passed_attn_check?: boolean
   explicit_attn_choices?: AttnChoices
@@ -37,6 +37,7 @@ export interface ParticipantData {
   implicit_attn_choices?: AttnChoices
   implicit_attn_round?: number
   implicit_attn_insert_pos: number
+  implicit_attn_target_index?: number
   last_updated_at?: string
   expired?: boolean
 }
@@ -45,13 +46,4 @@ export interface TrialDoc {
   id: string
   comparisons: Comparison[]
   participants: Record<string, ParticipantData>
-}
-
-export interface ParticipantResponse {
-  trialId: string
-  comparisons: Comparison[]
-  currentIndex: number // display index (0–31)
-  annotations: Annotation[]
-  completed: boolean
-  implicitAttnInsertPos: number
 }

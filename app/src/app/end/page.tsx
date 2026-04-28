@@ -1,6 +1,14 @@
+"use client"
+
+import { useSearchParams } from "next/navigation"
 import { config } from "@/config"
 
 export default function EndPage() {
+  const searchParams = useSearchParams()
+  const passedAttn = searchParams.get("passed_attn") === "true"
+  const passedImplicit = searchParams.get("passed_implicit") === "true"
+  const link = passedAttn && passedImplicit ? config.prolificLink : config.prolificFailedLink
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="max-w-md mx-auto px-6 text-center space-y-6">
@@ -10,7 +18,7 @@ export default function EndPage() {
           complete your submission on Prolific.
         </p>
         <a
-          href={config.prolificLink}
+          href={link}
           className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           Complete Submission

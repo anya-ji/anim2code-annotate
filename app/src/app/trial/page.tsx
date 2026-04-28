@@ -6,42 +6,8 @@ import VideoPlayer from "@/components/VideoPlayer"
 import QuestionBlock from "@/components/QuestionBlock"
 import InstructionPanel from "@/components/InstructionPanel"
 import type { Annotation, Choice, Comparison, ParticipantResponse } from "@/types"
-
-const TOTAL_DISPLAY_ROUNDS = 32
-
-type ScheduleItem =
-  | { type: "real"; dataIndex: number }
-  | { type: "explicit_attn" }
-  | { type: "implicit_attn"; url: string }
-
-function buildSchedule(
-  comparisons: Comparison[],
-  implicitInsertPos: number | undefined,
-  implicitTargetIndex: number | undefined,
-): ScheduleItem[] {
-  const insertPos = (implicitInsertPos != null && implicitInsertPos >= 1 && implicitInsertPos <= 30) ? implicitInsertPos : 1
-  const targetIdx = (implicitTargetIndex != null && implicitTargetIndex < comparisons.length) ? implicitTargetIndex : 0
-
-  const real: ScheduleItem[] = comparisons.map((_, i) => ({ type: "real" as const, dataIndex: i }))
-
-  // Explicit check inserted after 15 real rounds → position 15
-  const withExplicit: ScheduleItem[] = [
-    ...real.slice(0, 15),
-    { type: "explicit_attn" as const },
-    ...real.slice(15),
-  ]
-
-  const implicit: ScheduleItem = {
-    type: "implicit_attn" as const,
-    url: comparisons[targetIdx].ground_truth_url,
-  }
-
-  return [
-    ...withExplicit.slice(0, insertPos),
-    implicit,
-    ...withExplicit.slice(insertPos),
-  ]
-}
+import { buildSchedule, TOTAL_DISPLAY_ROUNDS, ATTN_GROUND_TRUTH_URL } from "@/lib/schedule"
+import type { ScheduleItem } from "@/lib/schedule"
 
 interface StoredData extends ParticipantResponse {
   pid: string
@@ -50,6 +16,8 @@ interface StoredData extends ParticipantResponse {
   // Persisted for explicit attention check across refreshes
   attnPrompts?: [Choice, Choice, Choice]
   attnCompIdx?: number
+  passedAttnCheck?: boolean
+  passedImplicitAttnCheck?: boolean
 }
 
 export default function TrialPage() {
@@ -89,13 +57,17 @@ export default function TrialPage() {
     )
   }
 
-  const schedule = buildSchedule(data.comparisons, data.implicitAttnInsertPos, data.implicitAttnTargetIndex)
+  const schedule = buildSchedule(data.comparisons, data.implicitAttnInsertPos)
   const currentItem = schedule[displayIndex]
 
   const advanceTo = (nextDisplayIndex: number, base: StoredData) => {
     if (nextDisplayIndex >= TOTAL_DISPLAY_ROUNDS) {
       sessionStorage.removeItem("trialData")
-      router.push("/end")
+      const params = new URLSearchParams({
+        passed_attn: String(base.passedAttnCheck ?? false),
+        passed_implicit: String(base.passedImplicitAttnCheck ?? false),
+      })
+      router.push(`/end?${params}`)
       return
     }
 
@@ -156,11 +128,12 @@ export default function TrialPage() {
         displayIndex,
         isAttentionCheck: true,
         passedAttentionCheck: passed,
+        annotation: result,
       })
       setAttnPrompts(null)
       setAttnCompIdx(null)
       const { attnPrompts: _p, attnCompIdx: _c, ...rest } = data
-      advanceTo(displayIndex + 1, rest as StoredData)
+      advanceTo(displayIndex + 1, { ...rest, passedAttnCheck: passed } as StoredData)
     } finally {
       setSaving(false)
     }
@@ -180,8 +153,9 @@ export default function TrialPage() {
         displayIndex,
         isImplicitAttnCheck: true,
         passedImplicitAttnCheck: passed,
+        annotation: result,
       })
-      advanceTo(displayIndex + 1, data)
+      advanceTo(displayIndex + 1, { ...data, passedImplicitAttnCheck: passed })
     } finally {
       setSaving(false)
     }
@@ -242,8 +216,7 @@ export default function TrialPage() {
 
   // Implicit attention check — looks identical to a real round
   if (currentItem.type === "implicit_attn") {
-    const url = (currentItem as { type: "implicit_attn"; url: string }).url
-    const fakeComp = { ground_truth_url: url, left_url: url, right_url: url }
+    const fakeComp = { ground_truth_url: ATTN_GROUND_TRUTH_URL, left_url: ATTN_GROUND_TRUTH_URL, right_url: ATTN_GROUND_TRUTH_URL }
     return (
       <div className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-3 gap-2">
         {progressBar}

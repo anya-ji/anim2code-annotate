@@ -59,9 +59,9 @@ function DemoQuestionBlock({ onNext }: { onNext: () => void }) {
               ))}
             </div>
             {q2 === "left" && (
-              <p className="text-xs text-green-700 font-medium">Correct! 
-              The left one matches the reference better (blue circle) in appearance even though the motion is inaccurate. <br/>
-              In the actual round, no feedback is given.</p>
+              <p className="text-xs text-green-700 font-medium">Correct!
+                The left one matches the reference better (blue circle) in appearance even though the motion is inaccurate. <br />
+                In the actual round, no feedback is given.</p>
             )}
             {q2 !== null && q2 !== "left" && (
               <p className="text-xs text-red-600 font-medium">Incorrect — select the correct answer to continue.</p>
@@ -83,9 +83,9 @@ function DemoQuestionBlock({ onNext }: { onNext: () => void }) {
               ))}
             </div>
             {q3 === "right" && (
-              <p className="text-xs text-green-700 font-medium">Correct! 
-              The right one matches the reference better in motion (circular) even though the appearance is inaccurate. <br/>
-              In the actual round, no feedback is given.</p>
+              <p className="text-xs text-green-700 font-medium">Correct!
+                The right one matches the reference better in motion (circular) even though the appearance is inaccurate. <br />
+                In the actual round, no feedback is given.</p>
             )}
             {q3 !== null && q3 !== "right" && (
               <p className="text-xs text-red-600 font-medium">Incorrect — select the correct answer to continue.</p>
@@ -135,19 +135,20 @@ function Page1({ onNext, skipTimer }: { onNext: () => void; skipTimer?: boolean 
           shape, color, style, motion path, and speed of the animation.
         </p>
         <p>
-          There will be 32 rounds in total. Videos will play on loop. There is no time limit for each round.
+          There will be 32 rounds in total. Videos will play on loop.
           This study should take around <strong>15 minutes</strong> to complete.
           You will be paid <strong>$4.50 USD</strong> upon approval.
-          Submissions that fail attention checks or show clear patterns of random or uniform responses may be rejected.
+          There will be attention checks within the rounds. Please follow the prompts carefully. Submissions that fail attention checks or show clear patterns of random or uniform responses may be requested for return.
         </p>
+        <p>Make sure you are accessing this study in a <strong>Google Chrome</strong> browser.</p>
+        <p>Please start as soon as you accepted and complete the study in one sitting. </p>
         <p>We will start with an example round to help you understand the task. Please click &quot;Next&quot; to continue.</p>
       </div>
       <button
         onClick={onNext}
         disabled={!ready}
-        className={`px-8 py-3 rounded-lg font-medium transition-colors ${
-          ready ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 text-gray-400 cursor-not-allowed"
-        }`}
+        className={`px-8 py-3 rounded-lg font-medium transition-colors ${ready ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          }`}
       >
         {ready ? "Next →" : `Next (${remaining}s)`}
       </button>

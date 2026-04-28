@@ -67,6 +67,12 @@ This runs four steps:
 3. Sample 30 trials × 2 sets → `data/{VERSION}/trials.json`
 4. Sync trials to Firestore collection `{VERSION}`
 
+### Print completion and attention-check stats
+
+```bash
+uv run scripts/stats.py
+```
+
 ### Export annotations to CSV
 
 ```bash
@@ -90,6 +96,33 @@ cd app && npx vercel deploy
 ```
 
 Set the `FIREBASE_SERVICE_ACCOUNT` environment variable in Vercel project settings.
+
+---
+
+## Study Design
+
+### Task
+Participants compare two AI-generated animations side-by-side against a reference. For each round they answer three questions: overall match, appearance match (shape/color/style only), and motion match (path/speed only). Choices are Left / Right / Equal.
+
+### Structure
+- **32 display rounds** per participant: 30 real comparisons + 2 attention checks.
+- **30 real comparisons**: drawn from a single trial (one of 20 Firestore documents). Each trial covers 10 model pairs × 3 comparisons per pair.
+- Left/right model assignment is randomised per comparison.
+
+### Attention Checks
+
+**Explicit attention check**
+Inserted at a fixed position after the 15th real round (display index 15 in the pre-implicit schedule; may shift by one if the implicit check is placed before it). All three videos — reference, left, and right — are taken from a randomly selected real comparison from the first 15. Before the round is shown, three random choices (one per question) are generated and displayed as instructions — the participant must answer exactly those choices to pass. Tests whether participants read and follow per-round instructions.
+
+**Implicit attention check (random position)**
+Inserted at a random position in [1, 30] \ {15} (avoiding the explicit check slot). All three videos (reference, left, right) are the same fixed clip (`codepen-zaXqRn-nwpKrg-2.mp4`). The correct answer for all three questions is "Equal". Tests whether participants pay attention to the videos at all.
+
+### Trial Assignment
+New participants are assigned to the trial with the fewest *active* participants. A participant slot is considered active if they completed the study, or have interacted within the last 30 minutes. Slots are excluded from the count if the participant is marked `expired` (set manually via `expire_participants.py`) or has no `last_updated_at` and no `completed_at` (old incomplete records).
+
+### Completion Links
+- Both attention checks passed → approval link (`config.prolificLink`)
+- Either check failed → separate link (`config.prolificFailedLink`)
 
 ---
 
