@@ -122,6 +122,8 @@ export default function TrialPage() {
         displayIndex,
         isAttentionCheck: true,
         passedAttentionCheck: passed,
+        attnCompIdx: attnCompIdx!,
+        attnPrompts: { match_choice: attnPrompts![0], appearance_choice: attnPrompts![1], motion_choice: attnPrompts![2] },
         annotation: result,
       })
       setAttnPrompts(null)

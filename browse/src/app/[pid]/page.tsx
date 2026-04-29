@@ -50,7 +50,7 @@ function VideoRow({ gtUrl, leftUrl, leftLabel, rightUrl, rightLabel }: {
 }
 
 function RoundRow({
-  displayIndex, item, reached, comparison, annotation, participant, implicitVideoUrl,
+  displayIndex, item, reached, comparison, annotation, participant, implicitVideoUrl, explicitComparison,
 }: {
   displayIndex: number
   item: ScheduleItem
@@ -59,6 +59,7 @@ function RoundRow({
   annotation: Annotation | undefined
   participant: ParticipantData
   implicitVideoUrl: string
+  explicitComparison: Comparison | null
 }) {
   const roundLabel = `Round ${displayIndex + 1}`
 
@@ -72,7 +73,7 @@ function RoundRow({
 
   if (item.type === "explicit_attn") {
     return (
-      <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 space-y-2">
+      <div className="rounded-lg border-2 border-amber-400 bg-amber-50 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wide text-amber-700 bg-amber-200 px-2 py-0.5 rounded">
             Explicit Attention Check
@@ -80,7 +81,39 @@ function RoundRow({
           <span className="text-xs text-gray-500">{roundLabel}</span>
           <AttnResult value={participant.passed_attn_check} />
         </div>
-        <AttnChoicesRow choices={participant.explicit_attn_choices} />
+        {explicitComparison ? (
+          <>
+            <p className="text-xs text-amber-700">
+              Video: <span className="font-mono">{explicitComparison.video_name}</span>
+              {" · "}data index {participant.explicit_attn_comp_idx}
+            </p>
+            <VideoRow
+              gtUrl={explicitComparison.ground_truth_url}
+              leftUrl={explicitComparison.left_url}
+              leftLabel={`Left (${explicitComparison.left_model})`}
+              rightUrl={explicitComparison.right_url}
+              rightLabel={`Right (${explicitComparison.right_model})`}
+            />
+          </>
+        ) : (
+          <p className="text-xs text-amber-600 italic">
+            {participant.explicit_attn_comp_idx != null ? "Comparison not found" : "Video not recorded"}
+          </p>
+        )}
+        {(() => {
+          const correct = participant.explicit_attn_prompts
+            ?? (participant.passed_attn_check === true ? participant.explicit_attn_choices : undefined)
+          return (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-amber-700">Correct answer{!participant.explicit_attn_prompts && participant.passed_attn_check === true ? " (derived — participant passed)" : !correct ? " — not recorded" : ""}:</p>
+              <AttnChoicesRow choices={correct} />
+            </div>
+          )
+        })()}
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-amber-700">Participant answer:</p>
+          <AttnChoicesRow choices={participant.explicit_attn_choices} />
+        </div>
       </div>
     )
   }
@@ -174,6 +207,10 @@ export default async function ParticipantDetailPage({ params }: { params: Promis
   }
 
   const completed = participant.completed_at != null
+  const explicitComparison: Comparison | null =
+    participant.explicit_attn_comp_idx != null
+      ? (foundTrial.comparisons[participant.explicit_attn_comp_idx] ?? null)
+      : null
   const implicitVideoUrl =
     participant.implicit_attn_target_index != null
       ? (foundTrial.comparisons[participant.implicit_attn_target_index]?.ground_truth_url ?? ATTN_GROUND_TRUTH_URL)
@@ -244,6 +281,7 @@ export default async function ParticipantDetailPage({ params }: { params: Promis
                 annotation={annotation}
                 participant={participant!}
                 implicitVideoUrl={implicitVideoUrl}
+                explicitComparison={explicitComparison}
               />
             )
           })}

@@ -32,6 +32,8 @@ export interface ParticipantData {
   current_index: number // display index (0–31)
   annotations: Annotation[]
   passed_attn_check?: boolean
+  explicit_attn_comp_idx?: number
+  explicit_attn_prompts?: AttnChoices
   explicit_attn_choices?: AttnChoices
   passed_implicit_attn_check?: boolean
   implicit_attn_choices?: AttnChoices

@@ -34,6 +34,8 @@ interface ExplicitAttnBody {
   displayIndex: number
   isAttentionCheck: true
   passedAttentionCheck: boolean
+  attnCompIdx: number
+  attnPrompts: AttnChoices
   annotation: AttnChoices
 }
 
@@ -65,6 +67,8 @@ export async function POST(request: NextRequest) {
   if ("isAttentionCheck" in body && body.isAttentionCheck) {
     const update: Record<string, unknown> = {
       [`participants.${pid}.passed_attn_check`]: body.passedAttentionCheck,
+      [`participants.${pid}.explicit_attn_comp_idx`]: body.attnCompIdx,
+      [`participants.${pid}.explicit_attn_prompts`]: body.attnPrompts,
       [`participants.${pid}.explicit_attn_choices`]: body.annotation,
       [`participants.${pid}.current_index`]: nextDisplayIndex,
       [`participants.${pid}.last_updated_at`]: now,
