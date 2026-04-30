@@ -55,18 +55,20 @@ def build_valid_csv(docs: list[dict]) -> None:
                     continue
                 left = comp["left_model"]
                 right = comp["right_model"]
-                choice = ann.get("match_choice", "")
-                if choice == "left":
-                    winner = left
-                elif choice == "right":
-                    winner = right
-                else:
-                    winner = "EQUAL"
+                def resolve(choice):
+                    if choice == "left":
+                        return left
+                    if choice == "right":
+                        return right
+                    return "EQUAL"
+
                 rows.append({
                     "model_1": left,
                     "model_2": right,
                     "example": comp["video_name"],
-                    "winner": winner,
+                    "winner_overall": resolve(ann.get("match_choice", "")),
+                    "winner_motion": resolve(ann.get("motion_choice", "")),
+                    "winner_appearance": resolve(ann.get("appearance_choice", "")),
                 })
 
     out = DB_DIR / "valid_trials.csv"
